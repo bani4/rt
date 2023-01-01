@@ -1,3 +1,13 @@
+'''
+Uses https://www.openstreetmap.org/, 
+sotherefore Nominatim, or salution_nominatim()
+
+Other maps/ APIs but not used:
+https://www.arcgis.com/home/webmap/viewer.html
+https://www.bing.com/maps/
+https://www.google.com/maps
+'''
+
 import pandas as pd
 import os
 import re
@@ -11,57 +21,67 @@ from pathlib import Path
 input_file = None ## input
 output_directory = None ## input
 output_file = None
-output_filename = 'results2.csv'
+output_filename = 'results.csv'
 
-def address_translit(s, lang):
-    new_s=''
+def transliterate(some_string, lang):
+    '''MAKING it LOWERCASE'''
+    string_transliterated=''
     if lang=='bg':
         bg_lat_map={
             'bg':['а','б','в','г','д','е','ж', 'з','и','й','к','л','м','н','о','п','р','с','т','у','ф','х', 'ц', 'ч', 'ш', 'щ','ъ','ь','ю','я'],
             'en':['a','b','v','g','d','e','zh','z','i','i','k','l','m','n','o','p','r','s','t','u','f','h','ts','ch','sh','sht','u','i','yu','ia']
         }
-    for symbol in s:
+    for symbol in some_string.lower():
         if symbol in bg_lat_map['bg']:
-            poz = bg_lat_map['bg'].index(symbol)
-            new_s+=bg_lat_map['en'][poz]
+            indx = bg_lat_map['bg'].index(symbol)
+            string_transliterated+=bg_lat_map['en'][indx]
         else:
-            new_s+=symbol
-    return new_s
+            string_transliterated+=symbol
+    return string_transliterated
 
-def normalize_address(s:str):
-    words = s.split(' ')
-    words = [i.replace(',','') for i in words]
-    forbidden = ['ul.', 'ул.', 'Street', 'Str.']
-    if any([i in forbidden for i in words]):
-        s=s.replace('ul. ','').replace('ул. ','').replace('Street','').replace('Str.','')
+def openstreetmap_normalize_address(address_non_normalized:str):
+    address_list = address_non_normalized.split(', ')
+
+    ## needed fixes for Nominatim
+    street_transliterated= transliterate(address_list[0],'bg') 
+    words_in_street = street_transliterated.split(' ')
+    words_in_street = [i.replace(',','') for i in words_in_street]
+    forbidden_words = ['ul.', 'ул.', 'street', 'str.', 'bulevard', 'булевард', 'бул.', 'tsar', '№']
+
+    while any([i in forbidden_words for i in words_in_street]):
+        found_list = [i in forbidden_words for i in words_in_street]
+        index_found = found_list.index(True)
+        del words_in_street[index_found]
     
-    if any([i.count('.') for i in words]):
-        for word in words:
-            if word.count('.')>0:
-                s=s.replace(word, '')
-    address = s.split(', ')
-    street= address_translit(address[0].lower(),'bg')
-    s=s.replace(address[0],street)
-    if street.split(' ')[0].isnumeric():
-        print(1)
-        street_number = street.split(' ')[0]
-        old_street = street
-        new_street = street.replace(street_number, '')+' '+street_number
-        s=s.replace(old_street, new_street)
-    city = address[1]
+    address_normalized=' '.join(words_in_street)+ ', '+', '.join(address_list[1:])
+    # print("\tinside function, address_normalized: ", address_normalized)
+    
+    # fix for China
+    if 'P.R.C' in address_normalized:
+        address_normalized = address_normalized.replace('P.R.C', 'China')
+
+    if words_in_street[0].isnumeric():
+        street_number = words_in_street[0]
+        old_street = ' '.join(words_in_street)
+        new_street = ' '.join(words_in_street[1:])+' '+street_number
+        address_normalized=address_normalized.replace(old_street, new_street)
+    # print("\taddress_normalized -> street number moved: ",address_normalized)
+
+    city = address_list[-2]
+    # print(city)
     city_code = re.findall(r'[0-9]+', city)
     if len(city_code)>0:
-        s=s.replace(city_code[0], '')
+        address_normalized=address_normalized.replace(city_code[0], '')
     
-    print('final: ',s)
-    return s
+    # print('\tfinal: ',address_normalized)
+    return address_normalized
 
-def doit(inf, outf):
+def solution_nominatim(inf, outf):
 
     df = pd.read_csv(inf)
     
     df['Address_normalized'] = df['Address']
-    df['Address_normalized'] = df['Address_normalized'].apply(normalize_address)
+    df['Address_normalized'] = df['Address_normalized'].apply(openstreetmap_normalize_address)
     
     ctx = ssl.create_default_context(cafile=certifi.where())
     geopy.geocoders.options.default_ssl_context = ctx
@@ -71,24 +91,22 @@ def doit(inf, outf):
 
     for row in df.index:
         try:
-            df.loc[row,"location"] = geolocator.geocode(df.loc[row,'Address_normalized']).address
-            ## test street address
-            # df.loc[row,"location"] = geolocator.geocode('Свищовска 65, Габрово, България').address
-
-            # df['location'] = geolocator.geocode(df['Address_normalized']).address ## not working, why?
+            df.loc[row,"nominatim_address_1"] = geolocator.geocode(df.loc[row,'Address_normalized']).address
+            
         except:
-            df.loc[row,"location"] = 'Need to be fixed/ normalized more'
-    # print(df[['Name','location']])  
-    df_names = pd.DataFrame(columns=['Name', 'Location'])
+            df.loc[row,"nominatim_address_1"] = 'Need to be fixed/ normalized more'
+    # print(df[['Name','nominatim_address_1']])  
+
+    df_result_names = pd.DataFrame(columns=['Names', 'Nominatim_address_1'])
     df.sort_values(by=['Name'], inplace=True)
     for row in df.index:
-        if df.loc[row, 'location'] not in df_names['Location'].unique():        
-            new_df_to_add = pd.DataFrame({'Name':[df.loc[row, 'Name']], 'Location':[df.loc[row, 'location']]})
-            df_names = pd.concat([df_names,new_df_to_add], ignore_index=True)
+        if df.loc[row, 'nominatim_address_1'] not in df_result_names['Nominatim_address_1'].unique():        
+            new_df_to_add = pd.DataFrame({'Names':[df.loc[row, 'Name']], 'Nominatim_address_1':[df.loc[row, 'nominatim_address_1']]})
+            df_result_names = pd.concat([df_result_names,new_df_to_add], ignore_index=True)
         else:
-            df_names.loc[df_names['Location']==df.loc[row, 'location'],['Name']]+=', '+df.loc[row,'Name']
-    print(df_names.head(5))
-    df_names[['Name']].to_csv(outf, index=False )
+            df_result_names.loc[df_result_names['Nominatim_address_1']==df.loc[row, 'nominatim_address_1'],['Names']]+=', '+df.loc[row,'Name']
+    print(df_result_names.head(5))
+    df_result_names[['Names']].to_csv(outf, index=False )
 
 def get_input_data():
     global input_file
@@ -114,7 +132,16 @@ def get_input_data():
 if __name__ == "__main__":
     print("----Resonanz Technologies Task1-----")
     get_input_data()
-    doit(input_file, output_file)
+    solution_nominatim(input_file, output_file)
+
+    ## testing single address
+    # ctx = ssl.create_default_context(cafile=certifi.where())
+    # geopy.geocoders.options.default_ssl_context = ctx
+    # geolocator = Nominatim(user_agent="my-app-here")
+    # address = 'ул. Копривщица 5, кв. Курило,  гр. Нови Искър, България'
+    # address_normalized = normalize_address(address)
+    # print("address normalized: ",address_normalized)
+    # print(geolocator.geocode(address_normalized).address)
 
 
     
