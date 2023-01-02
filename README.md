@@ -15,8 +15,9 @@ also be sorted alphabetically.
 ### Idea
 - Data from the input file is transfered to a dataframe in pandas.
 - Normalizing the address in a new column, needed because of the specifics of the chosen geocoder.
-- Second new column associated with the normalized address returning location
-- Grouping by the location
+- Second new column associated with the normalized address returning location (Nominatim_address_1)
+- Sorting by Name column
+- Grouping by the location (Nominatim_address_1)
 - Based on Nominatim geocoder in geopy library.
 ### PROs:
 - Without api keys. 
@@ -44,3 +45,4 @@ Run the file
 ```bash
 python task1.py
 ```
+- The result file is saved to the desired destination folder as results.csv
