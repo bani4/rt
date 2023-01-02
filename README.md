@@ -46,3 +46,7 @@ Run the file
 python task1.py
 ```
 - The result file is saved to the desired destination folder as results.csv
+- When finished, deactivate the venv
+```bash
+deactivate
+```
