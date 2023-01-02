@@ -26,22 +26,20 @@ also be sorted alphabetically.
 - Slow on big data.
 - Normalization of the given addresses.
 - Undetailed map (openstreetmap.org). Merged different street numbers on same street can appear in the output.
-### Instalations
+### Instalations and run
 - copy the repo
 - create venv in folder
 ```bash
 python -m venv venv
 ```
-Use the requirements.txt to install the libraries needed
-```bash
-python -m pip install -r requirements.txt
-```
-### Running
 Activate the venv
 ```bash
 venv\Scripts\activate.bat
 ```
-
+Use the requirements.txt to install the libraries needed
+```bash
+python -m pip install -r requirements.txt
+```
 Run the file
 ```bash
 python task1.py
