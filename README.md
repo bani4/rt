@@ -13,9 +13,9 @@ also be sorted alphabetically.
 - There are no library usage restrictions.
 ## Solution
 ### Idea
-- Data from the input file is transfered to a dataframe in pandas.
+- Data from the input file is transferred to a data frame in pandas.
 - Normalizing the address in a new column, needed because of the specifics of the chosen geocoder.
-- Second new column associated with the normalized address returning location (Nominatim_address_1)
+- Second new column associated with the normalized address returning location (Nominatim_address_1). If a normalized address returns no location, location value is set to 'Need to be fixed/ normalized more' for further fixes on normalization
 - Sorting by Name column
 - Grouping by the location (Nominatim_address_1)
 - Based on Nominatim geocoder in geopy library.
@@ -26,10 +26,10 @@ also be sorted alphabetically.
 ### CONs:
 - Slow on big data.
 - Normalization of the given addresses.
-- Undetailed map (openstreetmap.org). Merged different street numbers on same street can appear in the output.
+- Undetailed map (openstreetmap.org). Merged different street numbers on the same street can appear in the output.
 ### Instalations and run
-- copy the repo
-- create venv in folder
+- Copy the repo
+- Create venv in folder
 ```bash
 python -m venv venv
 ```
