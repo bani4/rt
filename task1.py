@@ -9,7 +9,6 @@ https://www.google.com/maps
 '''
 
 import pandas as pd
-import os
 import re
 from geopy.geocoders import Nominatim
 import ssl
@@ -105,7 +104,7 @@ def solution_nominatim(inf, outf):
             df_result_names = pd.concat([df_result_names,new_df_to_add], ignore_index=True)
         else:
             df_result_names.loc[df_result_names['Nominatim_address_1']==df.loc[row, 'nominatim_address_1'],['Names']]+=', '+df.loc[row,'Name']
-    print(df_result_names.head(5))
+    # print(df_result_names.head(5))
     df_result_names[['Names']].to_csv(outf, index=False )
 
 def get_input_data():
@@ -126,7 +125,7 @@ def get_input_data():
             break
         else:
             print("Directory does not exist or is a file!")
-    print(input_file,output_file, output_directory, output_filename)
+    # print(input_file,output_file, output_directory, output_filename)
     return True
 
 if __name__ == "__main__":
