@@ -21,6 +21,7 @@ input_file = None ## input
 output_directory = None ## input
 output_file = None
 output_filename = 'results.csv'
+check_string_failed_location = 'Need to be fixed/ normalized more'
 
 def transliterate(some_string, lang):
     '''MAKING it LOWERCASE'''
@@ -71,6 +72,12 @@ def openstreetmap_normalize_address(address_non_normalized:str):
     city_code = re.findall(r'[0-9]+', city)
     if len(city_code)>0:
         address_normalized=address_normalized.replace(city_code[0], '')
+
+    country = address_list[-1]
+    # print(city)
+    country_code = re.findall(r'[0-9]+', country)
+    if len(country_code)>0:
+        address_normalized=address_normalized.replace(country_code[0], '')
     
     # print('\tfinal: ',address_normalized)
     return address_normalized
@@ -93,7 +100,7 @@ def solution_nominatim(inf, outf):
             df.loc[row,"nominatim_address_1"] = geolocator.geocode(df.loc[row,'Address_normalized']).address
             
         except:
-            df.loc[row,"nominatim_address_1"] = 'Need to be fixed/ normalized more'
+            df.loc[row,"nominatim_address_1"] = check_string_failed_location
     # print(df[['Name','nominatim_address_1']])  
 
     df_result_names = pd.DataFrame(columns=['Names', 'Nominatim_address_1'])
@@ -105,7 +112,11 @@ def solution_nominatim(inf, outf):
         else:
             df_result_names.loc[df_result_names['Nominatim_address_1']==df.loc[row, 'nominatim_address_1'],['Names']]+=', '+df.loc[row,'Name']
     # print(df_result_names.head(5))
-    df_result_names[['Names']].to_csv(outf, index=False )
+    condition = df_result_names['Nominatim_address_1']!=check_string_failed_location
+    df_result_names.loc[condition][['Names']].to_csv(outf, index=False )
+    ## check those which need to be normalized
+    condition_check = df_result_names['Nominatim_address_1']==check_string_failed_location
+    df_result_names.loc[condition_check].to_csv('check.csv', index=False )
 
 def get_input_data():
     global input_file
